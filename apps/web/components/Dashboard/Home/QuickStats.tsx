@@ -53,13 +53,13 @@ export default function QuickStats() {
             {t('dashboard.home.analytics')}
           </h3>
           <p className="text-[11px] text-gray-400 mb-3 max-w-[200px]">
-            {t('dashboard.home.enable_analytics_description')}
+            {t('analytics.subtitle')}
           </p>
           <Link
             href="/dash/analytics"
             className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
           >
-            {t('dashboard.home.enable')} &rarr;
+            {t('dashboard.home.full_analytics')} &rarr;
           </Link>
         </div>
       </div>

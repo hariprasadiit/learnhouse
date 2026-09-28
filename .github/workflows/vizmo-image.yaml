@@ -10,7 +10,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: hariprasadiit/learnhouse
+  IMAGE_NAME: vizmo-vms/learnhouse
 
 jobs:
   build:
