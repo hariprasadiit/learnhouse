@@ -473,11 +473,11 @@ async def query_dashboard(
 @router.get(
     "/dashboard/db/{query_name}",
     summary="Run a PostgreSQL-backed dashboard query",
-    description="Executes a predefined PostgreSQL analytics query (e.g. grade distribution histogram). Requires org admin privileges and a Pro plan or higher.",
+    description="Executes a predefined PostgreSQL analytics query. The basic overview is available to organization admins; advanced queries require a Pro plan or higher.",
     responses={
         200: {"description": "Query results from PostgreSQL"},
         401: {"description": "Authentication required"},
-        403: {"description": "User is not admin or the organization lacks a Pro plan"},
+        403: {"description": "User is not admin or an advanced query requires a Pro plan"},
         404: {"description": "Unknown query name"},
     },
 )
@@ -495,10 +495,13 @@ async def query_dashboard_db(
 
     await _verify_org_admin(resolve_acting_user_id(current_user), org_id, db_session)
 
-    DB_QUERIES = {"grade_distribution"}
+    DB_QUERIES = {"basic_overview", "grade_distribution"}
 
     if query_name not in DB_QUERIES:
         raise HTTPException(status_code=404, detail="Unknown query")
+
+    if query_name == "basic_overview":
+        return await _query_postgres_overview(org_id, db_session)
 
     # All DB queries are Pro+ gated
     current_plan = await get_org_plan(org_id, db_session)
@@ -512,6 +515,94 @@ async def query_dashboard_db(
         return await _query_grade_distribution(org_id, db_session)
 
     raise HTTPException(status_code=404, detail="Unknown query")  # pragma: no cover
+
+
+async def _query_postgres_overview(org_id: int, db_session: AsyncSession):
+    """Basic all-time analytics from LearnHouse's durable PostgreSQL data."""
+    from sqlalchemy import text
+
+    summary_result = await db_session.execute(
+        text(
+            """
+            SELECT
+                (SELECT count(*) FROM userorganization WHERE org_id = :org_id) AS learners,
+                (SELECT count(*) FROM course WHERE org_id = :org_id) AS courses,
+                (SELECT count(*) FROM trailrun WHERE org_id = :org_id) AS enrollments,
+                (SELECT count(*) FROM trailrun
+                 WHERE org_id = :org_id AND status = 'STATUS_COMPLETED') AS completions,
+                (SELECT count(*) FROM trailstep
+                 WHERE org_id = :org_id AND complete = true) AS completed_activities
+            """
+        ),
+        {"org_id": org_id},
+    )
+    summary = dict(summary_result.mappings().one())
+    enrollments = summary["enrollments"] or 0
+    summary["completion_rate"] = round(
+        (summary["completions"] or 0) / enrollments * 100, 1
+    ) if enrollments else 0.0
+
+    courses_result = await db_session.execute(
+        text(
+            """
+            SELECT
+                c.course_uuid,
+                c.name,
+                c.published,
+                count(DISTINCT tr.id) AS enrollments,
+                count(DISTINCT tr.id) FILTER (
+                    WHERE tr.status = 'STATUS_COMPLETED'
+                ) AS completions,
+                count(DISTINCT ca.id) AS activities,
+                CASE
+                    WHEN count(DISTINCT tr.id) * count(DISTINCT ca.id) = 0 THEN 0
+                    ELSE round(
+                        100.0 * count(DISTINCT ts.id) FILTER (WHERE ts.complete = true)
+                        / (count(DISTINCT tr.id) * count(DISTINCT ca.id)),
+                        1
+                    )
+                END AS average_progress
+            FROM course c
+            LEFT JOIN trailrun tr
+                ON tr.course_id = c.id AND tr.org_id = :org_id
+            LEFT JOIN chapteractivity ca
+                ON ca.course_id = c.id AND ca.org_id = :org_id
+            LEFT JOIN trailstep ts
+                ON ts.course_id = c.id AND ts.org_id = :org_id
+            WHERE c.org_id = :org_id
+            GROUP BY c.id, c.course_uuid, c.name, c.published
+            ORDER BY enrollments DESC, c.name ASC
+            """
+        ),
+        {"org_id": org_id},
+    )
+
+    recent_result = await db_session.execute(
+        text(
+            """
+            SELECT
+                tr.creation_date AS enrolled_at,
+                tr.status,
+                c.course_uuid,
+                c.name AS course_name,
+                COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''),
+                         u.username, 'Learner') AS learner_name
+            FROM trailrun tr
+            JOIN course c ON c.id = tr.course_id
+            JOIN "user" u ON u.id = tr.user_id
+            WHERE tr.org_id = :org_id
+            ORDER BY tr.creation_date DESC
+            LIMIT 10
+            """
+        ),
+        {"org_id": org_id},
+    )
+
+    return {
+        "summary": summary,
+        "courses": [dict(row) for row in courses_result.mappings().all()],
+        "recent_enrollments": [dict(row) for row in recent_result.mappings().all()],
+    }
 
 
 async def _query_grade_distribution(org_id: int, db_session: AsyncSession):

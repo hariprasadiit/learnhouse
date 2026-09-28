@@ -15,6 +15,7 @@ import ExportAnalyticsButton from '@components/Dashboard/Analytics/AnalyticsExpo
 // Core widgets — dynamic to code-split recharts
 const EventOverview = dynamic(() => import('@components/Dashboard/Analytics/EventOverview'))
 const CoreWidgetsRow = dynamic(() => import('@components/Dashboard/Analytics/CoreWidgetsRow'))
+const PostgresOverview = dynamic(() => import('@components/Dashboard/Analytics/PostgresOverview'))
 
 // Advanced widgets — only loaded when user clicks the Advanced tab
 const AdvancedGate = dynamic(() => import('@components/Dashboard/Analytics/AdvancedGate').then(m => ({ default: m.AdvancedGate })))
@@ -89,31 +90,36 @@ export default function AnalyticsDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
-                {DATE_RANGES.map((r) => (
-                  <button
-                    key={r.value}
-                    onClick={() => setDays(r.value)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                      days === r.value
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
+              {analyticsStatus && !isConfigured && (
+                <span className="text-xs font-medium text-gray-500">All time</span>
+              )}
               {isConfigured && (
-                <ExportAnalyticsButton
-                  days={days}
-                  queries={tab === 'overview' ? OVERVIEW_QUERIES : ADVANCED_QUERY_NAMES}
-                />
+                <>
+                  <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                    {DATE_RANGES.map((r) => (
+                      <button
+                        key={r.value}
+                        onClick={() => setDays(r.value)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                          days === r.value
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                  <ExportAnalyticsButton
+                    days={days}
+                    queries={tab === 'overview' ? OVERVIEW_QUERIES : ADVANCED_QUERY_NAMES}
+                  />
+                </>
               )}
             </div>
           </div>
         </div>
-        <DashTabBar tabs={[
+        {isConfigured && <DashTabBar tabs={[
           {
             key: 'overview',
             label: t('analytics.tabs.overview'),
@@ -129,7 +135,7 @@ export default function AnalyticsDashboard() {
             active: tab === 'advanced',
             requiresPlan: !isAdvanced ? 'enterprise' : undefined,
           },
-        ]} />
+        ]} />}
       </div>
 
       {/* Content */}
@@ -143,15 +149,7 @@ export default function AnalyticsDashboard() {
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-10 pb-10"
       >
         {analyticsStatus && !isConfigured ? (
-          <div className="flex flex-col items-center justify-center h-96 text-center">
-            <div className="bg-white rounded-2xl border border-gray-100 p-10 max-w-md nice-shadow">
-              <div className="text-4xl mb-4">📊</div>
-              <h2 className="text-lg font-bold text-gray-900 mb-2">{t('analytics.not_configured.title')}</h2>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                {t('analytics.not_configured.description')}
-              </p>
-            </div>
-          </div>
+          <PostgresOverview />
         ) : tab === 'overview' ? (
           <div className="space-y-6 max-w-[1600px] mx-auto w-full">
             <EventOverview days={days} />

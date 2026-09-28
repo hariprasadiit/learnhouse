@@ -17,6 +17,7 @@ from src.routers.analytics import (
     _execute_tinybird_query,
     _get_read_client,
     _parse_safe_params,
+    _query_postgres_overview,
     _validate_course_uuid,
     _verify_org_admin,
     _verify_org_membership,
@@ -77,6 +78,49 @@ def _result(all_result=None, first_result=None):
 
 
 class TestAnalyticsHelpers:
+    async def test_postgres_overview_calculates_summary_and_returns_rows(self):
+        db = AsyncMock()
+
+        def mapped_result(*, one=None, all_rows=None):
+            mappings = MagicMock()
+            mappings.one.return_value = one
+            mappings.all.return_value = all_rows or []
+            result = MagicMock()
+            result.mappings.return_value = mappings
+            return result
+
+        db.execute.side_effect = [
+            mapped_result(one={
+                "learners": 8,
+                "courses": 2,
+                "enrollments": 5,
+                "completions": 2,
+                "completed_activities": 14,
+            }),
+            mapped_result(all_rows=[{
+                "course_uuid": "course-1",
+                "name": "Onboarding",
+                "published": True,
+                "enrollments": 5,
+                "completions": 2,
+                "activities": 6,
+                "average_progress": 46.7,
+            }]),
+            mapped_result(all_rows=[{
+                "enrolled_at": "2026-09-28T10:00:00Z",
+                "status": "STATUS_IN_PROGRESS",
+                "course_uuid": "course-1",
+                "course_name": "Onboarding",
+                "learner_name": "Asha Rao",
+            }]),
+        ]
+
+        result = await _query_postgres_overview(1, db)
+
+        assert result["summary"]["completion_rate"] == 40.0
+        assert result["courses"][0]["average_progress"] == 46.7
+        assert result["recent_enrollments"][0]["learner_name"] == "Asha Rao"
+
     def test_validate_course_uuid_and_sql_helpers(self):
         request = SimpleNamespace(query_params={"days": "14"})
         assert _parse_safe_params(3, request, 30) == (3, 14)
@@ -480,6 +524,20 @@ class TestAnalyticsRouter:
             result.scalars.return_value = scalars
             result.all.return_value = all_result if all_result is not None else []
             return result
+
+        overview = {
+            "summary": {"learners": 1, "courses": 1, "enrollments": 1},
+            "courses": [],
+            "recent_enrollments": [],
+        }
+        with _analytics_guard_patches(), patch(
+            "src.routers.analytics._query_postgres_overview",
+            new_callable=AsyncMock,
+            return_value=overview,
+        ):
+            response = await client.get("/api/v1/analytics/dashboard/db/basic_overview?org_id=1")
+        assert response.status_code == 200
+        assert response.json() == overview
 
         db_session.execute.return_value = _make_execute_result(all_result=[(90, 2), (100, 1)])
         with _analytics_guard_patches(), patch(
