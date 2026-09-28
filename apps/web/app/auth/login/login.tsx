@@ -869,13 +869,6 @@ const LoginClient = (props: LoginClientProps) => {
                 </div>
               )}
 
-              {/* Sign Up Link */}
-              <p className="text-center text-sm text-black/35 mt-6">
-                {t('auth.no_account')}{' '}
-                <Link href="/signup" className="text-black font-semibold hover:underline">
-                  {t('auth.sign_up')}
-                </Link>
-              </p>
             </div>
               </>
             )}
