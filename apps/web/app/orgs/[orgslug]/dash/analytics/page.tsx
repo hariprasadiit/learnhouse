@@ -148,7 +148,7 @@ export default function AnalyticsDashboard() {
         transition={{ duration: 0.1, type: 'spring', stiffness: 80 }}
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-10 pb-10"
       >
-        {analyticsStatus && !isConfigured ? (
+        {!isConfigured ? (
           <PostgresOverview />
         ) : tab === 'overview' ? (
           <div className="space-y-6 max-w-[1600px] mx-auto w-full">
