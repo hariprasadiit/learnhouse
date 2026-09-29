@@ -32,14 +32,17 @@ jobs:
     #
     # `closed` always dispatches, so teardown is never skipped.
     if: >-
-      github.event_name != 'pull_request' ||
+      github.repository == 'learnhouse/learnhouse' &&
       (
-        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event_name != 'pull_request' ||
         (
-          github.event.action == 'closed' ||
+          github.event.pull_request.head.repo.full_name == github.repository &&
           (
-            !github.event.pull_request.draft &&
-            !endsWith(github.event.pull_request.user.login, '[bot]')
+            github.event.action == 'closed' ||
+            (
+              !github.event.pull_request.draft &&
+              !endsWith(github.event.pull_request.user.login, '[bot]')
+            )
           )
         )
       )
