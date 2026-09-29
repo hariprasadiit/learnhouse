@@ -36,6 +36,23 @@ from src.services.courses.activities.utils import (
 logger = logging.getLogger(__name__)
 
 
+def _activity_ai_system_prompt(course: CourseRead, activity: ActivityRead) -> str:
+    return (
+        "You are an education assistant helping a student with the associated course. "
+        "Use the provided activity content to answer questions about the course material. "
+        f"The course is {course.name} and the activity is {activity.name}. "
+        "When a diagram would make an explanation clearer, include a fenced mermaid code block. "
+        "Use plain flowchart, sequenceDiagram, stateDiagram-v2, classDiagram, erDiagram, pie, "
+        "mindmap, or timeline syntax without configuration, custom styles, images, or links. "
+        "When a small interactive example would help the student learn, create it automatically "
+        "in a fenced html code block with self-contained HTML, inline CSS, and inline JavaScript. "
+        "Do not require the student to ask for code or a preview. Keep the example relevant to "
+        "the activity, concise, and usable without external libraries or network requests. "
+        "Explain the answer briefly alongside any diagram or interactive example. "
+        "If the activity content is insufficient, say so rather than inventing course facts."
+    )
+
+
 async def _authorize_activity_ai_access(
     request: Request,
     course: CourseRead,
@@ -492,14 +509,7 @@ async def ai_start_activity_chat_session_stream(
     try:
         chat_session = get_chat_session_history()
 
-        message = "You are a helpful Education Assistant, and you are helping a student with the associated Course. "
-        message += "Use the course content provided to answer questions about the course material."
-        message += "For context, this is the Course name: "
-        message += course.name
-        message += " and this is the Lecture name: "
-        message += activity.name
-        message += "."
-        message += "Use your knowledge to help the student if the context is not enough."
+        message = _activity_ai_system_prompt(course, activity)
     except Exception:
         refund_ai_credit(org.id)
         raise
@@ -541,14 +551,7 @@ async def ai_send_activity_chat_message_stream(
     try:
         chat_session = get_chat_session_history(chat_session_object.aichat_uuid)
 
-        message = "You are a helpful Education Assistant, and you are helping a student with the associated Course. "
-        message += "Use the course content provided to answer questions about the course material."
-        message += "For context, this is the Course name: "
-        message += course.name
-        message += " and this is the Lecture name: "
-        message += activity.name
-        message += "."
-        message += "Use your knowledge to help the student if the context is not enough."
+        message = _activity_ai_system_prompt(course, activity)
     except Exception:
         refund_ai_credit(org.id)
         raise

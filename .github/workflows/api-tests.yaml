@@ -53,6 +53,7 @@ jobs:
           TESTING: "true"
 
       - name: Upload API coverage to Codecov
+        if: github.repository == 'learnhouse/learnhouse'
         uses: codecov/codecov-action@v7
         with:
           files: apps/api/coverage.xml
