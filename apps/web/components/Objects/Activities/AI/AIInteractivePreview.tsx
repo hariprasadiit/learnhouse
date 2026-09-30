@@ -7,8 +7,30 @@ type PreviewKind = 'html' | 'mermaid'
 const MAX_PREVIEW_LENGTH = 40_000
 const PREVIEW_CSP = "default-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; worker-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:"
 
-export function buildHtmlPreviewDocument(source: string): string {
-  const innerDocument = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}"><style>html,body{margin:0;min-height:100%;font-family:system-ui,sans-serif}*{box-sizing:border-box}</style></head><body>${source}</body></html>`
+const LEARNING_UI_STYLES = `
+:root{color-scheme:light;--lh-accent:#007d83;--lh-accent-soft:#e7f5f4;--lh-text:#18343b;--lh-muted:#52666d;--lh-surface:#fff;--lh-border:#d8e5e7;--lh-radius:12px;--lh-space:16px}
+body{padding:20px;color:var(--lh-text);background:#f3f8f8;font:15px/1.55 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
+main,.lh-demo{max-width:760px;margin:auto}
+h1,h2,h3,p{margin:0 0 12px}h1,h2,h3{line-height:1.25;letter-spacing:-.025em}h1,h2{font-size:clamp(20px,4vw,26px)}h3{font-size:17px}
+button,input,select,textarea{font:inherit}input,select,textarea{max-width:100%;min-width:0}button,select,input:not([type=range]):not([type=checkbox]):not([type=radio]),textarea{border:1px solid var(--lh-border);border-radius:8px;min-height:44px;background:var(--lh-surface);color:var(--lh-text);padding:10px 14px}
+button{font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}button:hover:not(:disabled){border-color:var(--lh-accent);background:var(--lh-accent-soft)}button:disabled{opacity:.55;cursor:default}
+:is(button,input,select,textarea):focus-visible{outline:3px solid var(--lh-accent);outline-offset:3px}
+input[type=range],input[type=radio],input[type=checkbox]{accent-color:var(--lh-accent)}input[type=range]{width:100%}label{font-weight:600}svg{max-width:100%;height:auto}
+.lh-eyebrow{margin-bottom:8px;color:var(--lh-accent);font-size:11px;font-weight:750;letter-spacing:.1em;text-transform:uppercase}.lh-muted{color:var(--lh-muted);font-size:14px}
+.lh-card{padding:20px;border:1px solid var(--lh-border);border-radius:var(--lh-radius);background:var(--lh-surface);box-shadow:0 2px 8px #18343b06}
+.lh-stack{display:flex;flex-direction:column;gap:var(--lh-space)}.lh-stack>*{margin-block:0}.lh-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--lh-space)}.lh-actions{display:flex;flex-wrap:wrap;gap:8px}
+.lh-primary,.lh-primary:hover:not(:disabled){background:var(--lh-accent);border-color:var(--lh-accent);color:#fff}
+button[aria-pressed=true],[data-state=selected]{border-color:var(--lh-accent);background:var(--lh-accent-soft);color:var(--lh-text)}
+.lh-feedback{padding:12px 14px;border-radius:8px;background:var(--lh-accent-soft);border:1px solid var(--lh-border)}.lh-feedback:empty{padding:0;border:0}
+[data-state=correct]{color:#185738;background:#edf8f1;border-color:#a8d7b9}[data-state=incorrect]{color:#873817;background:#fff3eb;border-color:#e8bc9f}
+progress{width:100%;height:8px;accent-color:var(--lh-accent)}small{color:var(--lh-muted)}
+@media(max-width:480px){body{padding:12px}.lh-card{padding:16px}.lh-actions>button{flex:1}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+`
+
+export function buildHtmlPreviewDocument(source: string, kind: PreviewKind = 'html'): string {
+  const styles = kind === 'html' ? LEARNING_UI_STYLES : 'body{padding:12px;display:grid;place-items:center;min-height:100vh}svg{max-width:100%;height:auto}'
+  const innerDocument = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}"><style>html,body{margin:0;min-height:100%;font-family:system-ui,sans-serif}*{box-sizing:border-box}${styles}</style></head><body>${source}</body></html>`
   const escapedDocument = innerDocument.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   // The trusted outer policy also governs navigation of the generated frame.
   // A CSP inside generated HTML alone cannot stop it navigating itself.
@@ -103,12 +125,12 @@ export default function AIInteractivePreview({ kind, source, isStreaming = false
           sandbox="allow-scripts"
           allow="camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'"
           referrerPolicy="no-referrer"
-          className="block h-80 w-full bg-white"
+          className="block h-[420px] w-full bg-white"
         />
       ) : diagram ? (
         <iframe
           title="AI diagram"
-          srcDoc={buildHtmlPreviewDocument(diagram)}
+          srcDoc={buildHtmlPreviewDocument(diagram, 'mermaid')}
           sandbox=""
           referrerPolicy="no-referrer"
           className="block h-80 w-full bg-white"
