@@ -31,7 +31,15 @@ progress{width:100%;height:8px;accent-color:var(--lh-accent)}small{color:var(--l
 
 export function buildHtmlPreviewDocument(source: string, kind: PreviewKind = 'html'): string {
   const styles = kind === 'html' ? LEARNING_UI_STYLES : 'body{padding:12px;display:grid;place-items:center;min-height:100vh}svg{max-width:100%;height:auto}'
-  const innerDocument = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}"><style>html,body{margin:0;min-height:100%;font-family:system-ui,sans-serif}*{box-sizing:border-box}${styles}</style></head><body>${source}</body></html>`
+  const errorHandler = kind === 'html' ? `<script>window.addEventListener('error',()=>{
+    if(document.getElementById('lh-preview-error'))return;
+    const notice=document.createElement('p');
+    notice.id='lh-preview-error';notice.className='lh-feedback';
+    notice.setAttribute('role','alert');notice.setAttribute('data-state','incorrect');
+    notice.textContent='This exercise could not load. Ask AI for a complete version.';
+    document.body.append(notice);
+  });</script>` : ''
+  const innerDocument = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}">${errorHandler}<style>html,body{margin:0;min-height:100%;font-family:system-ui,sans-serif}*{box-sizing:border-box}${styles}</style></head><body>${source}</body></html>`
   const escapedDocument = innerDocument.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   // The trusted outer policy also governs navigation of the generated frame.
   // A CSP inside generated HTML alone cannot stop it navigating itself.

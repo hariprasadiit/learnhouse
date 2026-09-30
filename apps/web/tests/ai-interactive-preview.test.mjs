@@ -62,4 +62,25 @@ describe('activity AI interactive answers', () => {
     expect(document).toContain("form-action 'none'")
     expect(document).toContain("default-src 'none'")
   })
+
+  test('shows one readable alert when generated JavaScript fails', () => {
+    const preview = buildHtmlPreviewDocument('<script>throw new Error("broken exercise")</script>')
+    const inner = preview.match(/srcdoc="([^"]+)"/)[1]
+      .replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    const handler = inner.match(/<script>([\s\S]*?)<\/script>/)[1]
+    const notices = []
+    let onError
+    const frameDocument = {
+      body: { append: (node) => notices.push(node) },
+      getElementById: (id) => notices.find((node) => node.id === id),
+      createElement: () => ({ setAttribute(name, value) { this[name] = value } }),
+    }
+    new Function('window', 'document', handler)({ addEventListener: (_event, listener) => { onError = listener } }, frameDocument)
+    expect(notices).toHaveLength(0)
+    onError()
+    onError()
+    expect(notices).toHaveLength(1)
+    expect(notices[0].role).toBe('alert')
+    expect(notices[0].textContent).toContain('Ask AI for a complete version')
+  })
 })
