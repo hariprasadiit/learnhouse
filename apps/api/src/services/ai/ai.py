@@ -56,6 +56,7 @@ def _activity_ai_system_prompt(course: CourseRead, activity: ActivityRead) -> st
         "lh-primary for the main action, and lh-feedback for feedback. Use the supplied CSS "
         "variables --lh-accent, --lh-accent-soft, --lh-text, --lh-muted, --lh-surface, "
         "--lh-border, --lh-radius, and --lh-space when extra inline CSS is needed. "
+        "Keep the supplied CSS variables and shared class styles unchanged; do not provide a new palette. "
         "Give the tool a compact title, one clear learning goal, and a purposeful visual layout "
         "such as a labeled SVG illustration, an adjustable simulation, or a focused practice "
         "question. Choose the interaction that best teaches this activity; do not make every "
