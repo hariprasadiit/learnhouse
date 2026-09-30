@@ -22,9 +22,10 @@ input[type=range],input[type=radio],input[type=checkbox]{accent-color:var(--lh-a
 .lh-primary,.lh-primary:hover:not(:disabled){background:var(--lh-accent);border-color:var(--lh-accent);color:#fff}
 button[aria-pressed=true],[data-state=selected]{border-color:var(--lh-accent);background:var(--lh-accent-soft);color:var(--lh-text)}
 .lh-feedback{padding:12px 14px;border-radius:8px;background:var(--lh-accent-soft);border:1px solid var(--lh-border)}.lh-feedback:empty{padding:0;border:0}
-[data-state=correct]{color:#185738;background:#edf8f1;border-color:#a8d7b9}[data-state=incorrect]{color:#873817;background:#fff3eb;border-color:#e8bc9f}
+[data-state=correct],button[data-state=correct],button[data-state=correct]:hover,.lh-primary[data-state=correct]:hover{color:#185738;background:#edf8f1;border-color:#a8d7b9}
+[data-state=incorrect],button[data-state=incorrect],button[data-state=incorrect]:hover,.lh-primary[data-state=incorrect]:hover{color:#873817;background:#fff3eb;border-color:#e8bc9f}
 progress{width:100%;height:8px;accent-color:var(--lh-accent)}small{color:var(--lh-muted)}
-@media(max-width:480px){body{padding:12px}.lh-card{padding:16px}.lh-actions>button{flex:1}}
+@media(max-width:480px){body{padding:12px}.lh-card{padding:16px}.lh-actions>button{flex:1 1 120px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 `
 
