@@ -71,6 +71,7 @@ def _activity_ai_system_prompt(course: CourseRead, activity: ActivityRead) -> st
         "inputs, aria-pressed for choice buttons, and aria-live=\"polite\" for feedback. "
         "For single-answer questions, reset other choices' aria-pressed and data-state when "
         "a choice is selected. After Next or Restart, focus the new question or first choice. "
+        "Do not autofocus the exercise on initial render. "
         "Avoid browser-default looking forms, decorative gradients, oversized headers, "
         "generic card grids, or placeholder content. Add only CSS needed for the lesson's "
         "specific visuals; do not override the supplied body or control styling. "
